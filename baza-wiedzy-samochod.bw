@@ -1,0 +1,52 @@
+1: "ograniczenie do 50" && "szybkość ponizej 50" -> "prawidłowa predkosc"
+2: "ograniczenie do 50" && "szybkość powyzej 50" -> "nieprawidłowa predkosc"
+3: "nieprawidłowa predkosc" -> "nalezy zwolnic"
+4: "prawidłowa predkosc" && "trudne warunki" -> "nalezy zwolnic"
+5: "mgla" -> "trudne warunki" 
+6: "snieg" -> "trudne warunki" 
+Fakty: "ograniczenie do 50", "szybkość ponizej 50", "mgla"
+# testy
+7: "nalezy zwolnic" -> "zwieksz ostroznosc"
+8: "zwieksz ostroznosc" -> "jedz defensywnie"
+9: "jedz defensywnie" && "trudne warunki" -> "wysokie ryzyko"
+
+# petla test, dziala
+#10: "wysokie ryzyko" -> "nalezy zwolnic"
+
+#backward
+#Cel: "zwieksz ostroznosc"
+#Cel: "prawidłowa predkosc"
+
+# test negacji
+11: ~"trudne warunki" -> "dobre warunki"
+12: "prawidłowa predkosc" && ~"trudne warunki" -> "jedz normalnie"
+
+
+# więcej testów dla negacji
+13: ~"snieg" -> "brak sniegu"
+14: ~"mgla" && "ograniczenie do 50" -> "dobra widocznosc"
+15: ~"wysokie ryzyko" && "prawidłowa predkosc" -> "bezpieczeństwo"
+16: ~"nalezy zwolnic" && "prawidłowa predkosc" -> "jedzenie z normalną predkością"
+17: ~"mgla" && ~"snieg" -> "warunki idealne"
+18: "warunki idealne" -> "maksymalna ostrozonosc niezbedna patrz dalej"
+
+
+# test negacji
+Fakty: "ograniczenie do 50", "szybkość ponizej 50"
+#Cel: "dobre warunki"
+#Cel: "jedz normalnie"
+
+
+#cele do testow
+#Cel: "prawidłowa predkosc"
+#Cel: "nalezy zwolnic"
+#Cel: "zwieksz ostroznosc"
+#Cel: "dobre warunki"
+#Cel: "bezpieczeństwo"
+#Cel: "jedz defensywnie"
+#Cel: "wysokie ryzyko"
+#Cel: "warunki idealne"
+#Cel: "brak sniegu"
+#Cel: "dobra widocznosc"
+#Cel: "jedzenie z normalną prędkością"
+#Cel: "maksymalna ostrozonosc niezbedna patrz dalej"
