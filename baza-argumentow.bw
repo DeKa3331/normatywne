@@ -1,0 +1,16 @@
+L:a,b,c,d,e,f,g,h
+kh: e
+kp: a, b, c,d
+
+Rs: r1:e -> f
+
+Rd:
+
+r2:a,b => g
+r3: c=> ~g
+r4: c,d => ~g
+r5: g,h=> w
+r6:d=>~r3
+
+
+
