@@ -161,6 +161,19 @@ def cartesian_product(lists_of_lists):
     return res
 
 
+def export_argumentation_framework(filename, arguments, attacks):
+    # Zapis zgodny z formatem oczekiwanym przez program2.py:
+    # argumenty: A1, A2, ...
+    # A1 -> A2
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write('argumenty: ')
+        f.write(', '.join(arg.id for arg in arguments))
+        f.write('\n')
+
+        for _, attacker, attacked in attacks:
+            f.write(f'{attacker} -> {attacked}\n')
+
+
 def parse_input_file(filename):
     kh = []
     kb = []
@@ -303,6 +316,9 @@ def main():
     print('\nWykryte ataki:')
     for t, a, b in attacks:
         print(f"{t}: {a} -> {b}")
+
+    export_argumentation_framework('baza-atakow.bw', args, attacks)
+    print('\nZapisano do pliku: baza-atakow.bw')
 
 
 if __name__ == '__main__':

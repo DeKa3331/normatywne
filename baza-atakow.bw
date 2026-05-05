@@ -1,49 +1,6 @@
-# Ctrl+/ komentuje jak ustawie pythona
-# Baza 0: aktualna
-argumenty: a,b,c,d,e
-a->b
-b->a
-c->a
-d->e
-e->d
-d->a
-
-# # Baza 1: lancuch atakow
-# a->b
-# b->c
-# c->d
-
-# # Baza 2: cykl nieparzysty
-# a->b
-# b->c
-# c->a
-
-# # Baza 3: dwa niezalezne komponenty
-# # komponent 1
-# p->q
-# q->p
-# r->p
-
-# # komponent 2
-# x->y
-# y->z
-# z->x
-
-# # Baza 4: gwiazda
-# #a->b
-# a->c
-# a->d
-# a->e
-# e->a
-
-# # Baza 5: wiekszy przyklad
-# m->n
-# n->m
-# o->m
-# p->o
-# q->p
-# r->q
-# s->r
-# r->t
-# t->s
-# u->t
+argumenty: A1, A2, A3, A4, A5, A6, A7, A8, A9
+A6 -> A7
+A6 -> A8
+A7 -> A6
+A8 -> A6
+A9 -> A7
