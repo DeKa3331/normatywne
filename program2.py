@@ -85,7 +85,7 @@ class ArgumentationFramework:
         
         return True
     
-    def is_admissible(self, extension):
+    def is_admissible(self, extension): #moze sie obronic
         for arg in extension:
             if not self.is_acceptable(arg, extension):
                 return False

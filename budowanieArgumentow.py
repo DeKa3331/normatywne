@@ -53,8 +53,8 @@ class ArgumentGenerator:
         self.kb = kb
         self.kp = kp
         self.rules = {r.id: r for r in rules}
-        self.derived = {}
-        self.arguments = []
+        self.derived = {} #pogrupowane po konklizji
+        self.arguments = [] #cala lista
 
     def _add_argument(self, arg: Argument) -> None:
         existing = self.derived.get(arg.conclusion, [])
@@ -130,14 +130,13 @@ class ArgumentGenerator:
         attacks = []
         for a in self.arguments:
             for b in self.arguments:
-                if a.id == b.id:
+                if a.id == b.id: #sam ze soba
                     continue
-                if a.conclusion == negate(b.conclusion):
+                if a.conclusion == negate(b.conclusion): #negacje konkluzji -> rebuttal
                     attacks.append(('rebuttal', a.id, b.id))
                     continue
-                if a.conclusion.startswith('not '):
+                if a.conclusion.startswith('not '): # undercut if conclusion negates a premise
                     p = a.conclusion[4:]
-                    # undercut if conclusion negates a premise
                     if p in b.premises:
                         attacks.append(('undercut', a.id, b.id))
                         continue
@@ -160,11 +159,11 @@ def cartesian_product(lists_of_lists):
         res = new
     return res
 
+#wejście [[A1, A2], [B1, B2]]
+#wyjście [[A1, B1], [A1, B2], [A2, B1], [A2, B2]]
+
 
 def export_argumentation_framework(filename, arguments, attacks):
-    # Zapis zgodny z formatem oczekiwanym przez program2.py:
-    # argumenty: A1, A2, ...
-    # A1 -> A2
     with open(filename, 'w', encoding='utf-8') as f:
         f.write('argumenty: ')
         f.write(', '.join(arg.id for arg in arguments))
