@@ -1,4 +1,4 @@
-L: a, b, c, d, e, f, g, h, O(h), O(~h), ~O(h), ~O(~h)
+L: a, b, c, d, e,g,i
 kh:
 kb:
 kp: a, b, d, e, g, i
@@ -11,5 +11,6 @@ r1: a, b => c
 r2: d, e => f
 r3: f => O(h)
 r4: c => ~O(h)
-r5: g => ~O(~h)
-r6: i => O(~h)
+r5: g => O(~h)
+#r6: i => (r3>r4)
+r7: i => ~r5

@@ -156,8 +156,11 @@ def find_grounded_extension(af):
         current = next_extension
 
 
+import os
+
 af = ArgumentationFramework()
-af.load_attacks_from_file('baza-atakow.bw')
+base_dir = os.path.dirname(os.path.abspath(__file__))
+af.load_attacks_from_file(os.path.join(base_dir, 'baza-atakow.bw'))
 preferred_extensions = find_all_preferred_extensions(af)
 grounded_extension = find_grounded_extension(af)
 ataki=False

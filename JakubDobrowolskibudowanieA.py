@@ -83,17 +83,32 @@ def same_or_complement(left, right):
     return False
 
 
+def preference_pair(formula):
+    formula = formula.strip()
+    if formula.startswith('(') and formula.endswith(')'):
+        formula = formula[1:-1].strip()
+    if '>' not in formula:
+        return None
+    left, right = formula.split('>', 1)
+    left = left.strip()
+    right = right.strip()
+    if not left or not right:
+        return None
+    return left, right
+
+
 def deontic_counterpart(formula):
     content = obligation_inner(formula)
     return flip_negation('O(' + flip_negation(content) + ')')
 
 
 class ArgumentGenerator:
-    def __init__(self, kh, kb, kp, rules):
+    def __init__(self, kh, kb, kp, rules, prefs=None):
         self.kh = kh
         self.kb = kb
         self.kp = kp
         self.rules = {r.id: r for r in rules}
+        self.prefs = prefs or []
         self.derived = {} #pogrupowane po konklizji
         self.arguments = [] #cala lista
 
@@ -169,10 +184,25 @@ class ArgumentGenerator:
 
     def detect_attacks(self):
         attacks = []
+        active_prefs = []
+        for arg in self.arguments:
+            pref = preference_pair(arg.conclusion)
+            if pref is not None:
+                active_prefs.append((pref[0], pref[1]))
         for a in self.arguments:
             for b in self.arguments:
                 if a.id == b.id: #sam ze soba
                     continue
+                blocked_by_pref = False
+                # if some derived preference says strong > weak, then attacks from weak to strong are blocked
+                for strong, weak in active_prefs:
+                    if strong in b.rules_used and weak in a.rules_used:
+                        blocked_by_pref = True
+                        break
+
+                if blocked_by_pref:
+                    continue
+
                 if same_or_complement(a.conclusion, b.conclusion):
                     attacks.append(('rebuttal', a.id, b.id))
                     continue
@@ -222,14 +252,25 @@ def parse_input_file(filename):
     kb = []
     kp = []
     rules = []
+    prefs = []
     rid_counter = 1
 
     current_section = None
 
+    def split_section_value(line):
+        if '=' in line:
+            return line.split('=', 1)[1].strip()
+        if ':' in line:
+            return line.split(':', 1)[1].strip()
+        return ''
+
+    def strip_terminal_punctuation(text):
+        return text.strip().rstrip('.;')
+
     def parse_atoms(part):
         res = []
         for x in part.split(','):
-            v = x.strip()
+            v = strip_terminal_punctuation(x)
             if v:
                 res.append(v)
         return res
@@ -242,39 +283,123 @@ def parse_input_file(filename):
 
             low = line.lower()
             # section headers
-            if low.startswith('l:'):
+            if low.startswith('l') and (':' in line or '=' in line):
                 # list of all atoms (not used directly, but parse for completeness)
-                part = line.split(':', 1)[1]
+                part = split_section_value(line)
                 # ignore for now
                 current_section = 'L'
                 continue
-            if low.startswith('kh:'):
-                part = line.split(':', 1)[1]
+            if low.startswith('kh') and (':' in line or '=' in line):
+                part = split_section_value(line)
                 for v in parse_atoms(part):
                     if v not in kh:
                         kh.append(v)
                 current_section = 'kh'
                 continue
-            if low.startswith('kb:'):
-                part = line.split(':', 1)[1]
+            if low.startswith('kb') and (':' in line or '=' in line):
+                part = split_section_value(line)
                 for v in parse_atoms(part):
                     if v not in kb:
                         kb.append(v)
                 current_section = 'kb'
                 continue
-            if low.startswith('kp:'):
-                part = line.split(':', 1)[1]
+            if low.startswith('kp') and (':' in line or '=' in line):
+                part = split_section_value(line)
                 for v in parse_atoms(part):
                     if v not in kp:
                         kp.append(v)
                 current_section = 'kp'
                 continue
 
-            if low.startswith('rs:'):
+            if low.startswith('kn') and (':' in line or '=' in line):
+                # negative knowledge is accepted syntactically but not used by this builder
+                current_section = 'kn'
+                continue
+
+            if low.startswith('rs') and (':' in line or '=' in line):
                 current_section = 'Rs'
                 continue
-            if low.startswith('rd:'):
+            if low.startswith('rd') and (':' in line or '=' in line):
+                payload = split_section_value(line)
                 current_section = 'Rd'
+                if payload:
+                    compact = payload.strip()
+                    if compact.startswith('{') and compact.endswith('}'):
+                        compact = compact[1:-1].strip()
+                    for fragment in compact.split('.'):
+                        fragment = fragment.strip()
+                        if not fragment:
+                            continue
+                        if '->' not in fragment and '=>' not in fragment:
+                            continue
+                        op = '->' if '->' in fragment else '=>'
+                        left, right = fragment.split(op, 1)
+                        left = strip_terminal_punctuation(left)
+                        head = strip_terminal_punctuation(right)
+
+                        if head.startswith('~'):
+                            head = 'not ' + head[1:].strip()
+
+                        if ':' in left:
+                            rid_part, body_part = left.split(':', 1)
+                            rid = rid_part.strip()
+                            body_text = body_part.strip()
+                        else:
+                            rid = f"r{rid_counter}"
+                            rid_counter += 1
+                            body_text = left
+
+                        body = []
+                        if body_text:
+                            for v in parse_atoms(body_text):
+                                vv = v
+                                if vv.startswith('~'):
+                                    vv = 'not ' + vv[1:].strip()
+                                body.append(vv)
+
+                        strict = (op == '->')
+                        rules.append(Rule(rid, body, head, strict=strict))
+                continue
+
+            # compact section syntax like `Rd = {r1: a,b => c. r2: ...}`
+            if current_section in ('Rs', 'Rd') and ('{' in line or '}' in line or '.' in line):
+                payload = split_section_value(line)
+                payload = payload.strip()
+                if payload.startswith('{') and payload.endswith('}'):
+                    payload = payload[1:-1].strip()
+                for fragment in payload.split('.'):
+                    fragment = fragment.strip()
+                    if not fragment:
+                        continue
+                    if '->' not in fragment and '=>' not in fragment:
+                        continue
+                    op = '->' if '->' in fragment else '=>'
+                    left, right = fragment.split(op, 1)
+                    left = left.strip()
+                    head = right.strip()
+
+                    if head.startswith('~'):
+                        head = 'not ' + head[1:].strip()
+
+                    if ':' in left:
+                        rid_part, body_part = left.split(':', 1)
+                        rid = rid_part.strip()
+                        body_text = body_part.strip()
+                    else:
+                        rid = f"r{rid_counter}"
+                        rid_counter += 1
+                        body_text = left
+
+                    body = []
+                    if body_text:
+                        for v in parse_atoms(body_text):
+                            vv = v
+                            if vv.startswith('~'):
+                                vv = 'not ' + vv[1:].strip()
+                            body.append(vv)
+
+                    strict = (op == '->')
+                    rules.append(Rule(rid, body, head, strict=strict))
                 continue
 
             # inside Rs / Rd sections we expect rule lines
@@ -290,7 +415,7 @@ def parse_input_file(filename):
 
                 left, right = line.split(op, 1)
                 left = left.strip()
-                head = right.strip()
+                head = strip_terminal_punctuation(right)
 
                 # normalize negation marker: '~x' -> 'not x'
                 if head.startswith('~'):
@@ -319,25 +444,23 @@ def parse_input_file(filename):
                 rules.append(Rule(rid, body, head, strict=strict))
                 continue
 
-            # fallback: ignore unknown lines
-
-    return kh, kb, kp, rules
+    return kh, kb, kp, rules, prefs
 
 
 def main():
     # prefer the deontic knowledge base, then the standard one, then the fallback example
     try:
         try:
-            kh, kb, kp, rules = parse_input_file('deontyczna-baza-wiedzy.bw')
+            kh, kb, kp, rules, prefs = parse_input_file('deontyczna-baza-wiedzy.bw')
             if not kh and not kb and not kp and not rules:
                 raise FileNotFoundError
         except FileNotFoundError:
             try:
-                kh, kb, kp, rules = parse_input_file('baza-argumentow.bw')
+                kh, kb, kp, rules, prefs = parse_input_file('baza-argumentow.bw')
                 if not kh and not kb and not kp and not rules:
                     raise FileNotFoundError
             except FileNotFoundError:
-                kh, kb, kp, rules = parse_input_file('arguments.bw')
+                kh, kb, kp, rules, prefs = parse_input_file('arguments.bw')
             if not kh and not kb and not kp and not rules:
                 raise FileNotFoundError
     except FileNotFoundError:
@@ -351,8 +474,9 @@ def main():
         ]
 
         kh = []
+        prefs = []
 
-    gen = ArgumentGenerator(kh, kb, kp, rules)
+    gen = ArgumentGenerator(kh, kb, kp, rules, prefs=prefs)
     args = gen.generate()
 
     print('Wygenerowane argumenty:')
