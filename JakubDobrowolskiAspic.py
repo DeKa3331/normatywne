@@ -10,6 +10,14 @@ def is_subset(smaller, bigger):
     return True
 
 
+def argument_sort_key(argument):
+    if isinstance(argument, str) and argument.startswith('A'):
+        suffix = argument[1:]
+        if suffix.isdigit():
+            return int(suffix)
+    return argument
+
+
 class Attack:
     def __init__(self, attacker, attacked):
         self.attacker = clean(attacker)
@@ -141,7 +149,7 @@ def find_grounded_extension(af):
             if af.is_acceptable(arg, current):
                 next_extension.append(arg)
 
-        next_extension = sorted(next_extension)
+        next_extension = sorted(next_extension, key=argument_sort_key)
         if current == next_extension:
             return next_extension
 
@@ -158,7 +166,7 @@ if ataki:
     print("Wczytane ataki:")
     for attack in af.attacks:
         print(f"{attack}")
-    print(f"\nArgumenty w systemie: {sorted(af.arguments)}")
+    print(f"\nArgumenty w systemie: {sorted(af.arguments, key=argument_sort_key)}")
     print(f"Liczba preferowanych ekstensji: {len(preferred_extensions)}\n")
 
 
@@ -166,7 +174,7 @@ if ataki:
 
 
 for i, ext in enumerate(preferred_extensions, 1):
-    print(f"Ekstensja {i}: {sorted(ext)}")
+    print(f"Ekstensja {i}: {sorted(ext, key=argument_sort_key)}")
 
 print(f"\nGrounded: {grounded_extension}")
 

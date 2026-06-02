@@ -47,6 +47,47 @@ def negate(atom: str) -> str:
     return 'not ' + atom
 
 
+def is_obligation(formula):
+    formula = formula.strip()
+    return formula.startswith('O(') and formula.endswith(')')
+
+
+def obligation_inner(formula):
+    formula = formula.strip()
+    if formula.startswith('not '):
+        formula = formula[4:].strip()
+    if formula.startswith('~'):
+        formula = formula[1:].strip()
+    return formula[2:-1].strip()
+
+
+def flip_negation(formula):
+    formula = formula.strip()
+    if formula.startswith('not '):
+        return formula[4:].strip()
+    if formula.startswith('~'):
+        return formula[1:].strip()
+    return 'not ' + formula
+
+
+def same_or_complement(left, right):
+    left = left.strip()
+    right = right.strip()
+
+    if left == flip_negation(right) or right == flip_negation(left):
+        return True
+
+    if is_obligation(left) and is_obligation(right):
+        return same_or_complement(obligation_inner(left), obligation_inner(right))
+
+    return False
+
+
+def deontic_counterpart(formula):
+    content = obligation_inner(formula)
+    return flip_negation('O(' + flip_negation(content) + ')')
+
+
 class ArgumentGenerator:
     def __init__(self, kh, kb, kp, rules):
         self.kh = kh
@@ -132,13 +173,16 @@ class ArgumentGenerator:
             for b in self.arguments:
                 if a.id == b.id: #sam ze soba
                     continue
-                if a.conclusion == negate(b.conclusion): #negacje konkluzji -> rebuttal
+                if same_or_complement(a.conclusion, b.conclusion):
                     attacks.append(('rebuttal', a.id, b.id))
+                    continue
+                if is_obligation(a.conclusion) and b.conclusion == deontic_counterpart(a.conclusion):
+                    attacks.append(('deontic', a.id, b.id))
                     continue
                 if a.conclusion.startswith('not '): # undercut if conclusion negates a premise
                     p = a.conclusion[4:]
                     if p in b.premises:
-                        attacks.append(('undercut', a.id, b.id))
+                        attacks.append(('undermining', a.id, b.id))
                         continue
                     # or undercut if conclusion negates a rule used by b (e.g. 'not r3')
                     if p in b.rules_used:
@@ -281,14 +325,19 @@ def parse_input_file(filename):
 
 
 def main():
-    # prefer reading 'baza-argumentow.bw' if present, fall back to 'arguments.bw'
+    # prefer the deontic knowledge base, then the standard one, then the fallback example
     try:
         try:
-            kh, kb, kp, rules = parse_input_file('baza-argumentow.bw')
+            kh, kb, kp, rules = parse_input_file('deontyczna-baza-wiedzy.bw')
             if not kh and not kb and not kp and not rules:
                 raise FileNotFoundError
         except FileNotFoundError:
-            kh, kb, kp, rules = parse_input_file('arguments.bw')
+            try:
+                kh, kb, kp, rules = parse_input_file('baza-argumentow.bw')
+                if not kh and not kb and not kp and not rules:
+                    raise FileNotFoundError
+            except FileNotFoundError:
+                kh, kb, kp, rules = parse_input_file('arguments.bw')
             if not kh and not kb and not kp and not rules:
                 raise FileNotFoundError
     except FileNotFoundError:
